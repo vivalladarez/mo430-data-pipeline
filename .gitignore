@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Airflow (AIRFLOW_HOME = raiz do repositório)
+airflow.cfg
+airflow.db
+logs/
+webserver_config.py
+airflow-webserver.pid
+standalone_admin_password.txt
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Dados gerados localmente (mantenha raw/sample.csv versionado)
+data/bronze/
+data/silver/
+data/gold/

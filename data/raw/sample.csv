@@ -1,0 +1,5 @@
+id,categoria,valor,observacao
+1,A,10.5,  primeira linha
+2,B,20.0,segunda
+1,A,10.5, duplicata de id
+3,A,5.0,terceira
