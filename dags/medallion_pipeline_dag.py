@@ -12,7 +12,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 
 from medallion.bronze import run_bronze
-from medallion.bronzeNIH import run_bronze_nih
+from medallion.bronze_ebi import run_bronze_ebi
 from medallion.gold import run_gold
 from medallion.silver import run_silver
 
@@ -28,9 +28,9 @@ with DAG(
         task_id="bronze_ingest",
         python_callable=run_bronze,
     )
-    bronze_nih = PythonOperator(
-        task_id="bronze_nih_ingest",
-        python_callable=run_bronze_nih,
+    bronze_ebi = PythonOperator(
+        task_id="bronze_ebi_ingest",
+        python_callable=run_bronze_ebi,
     )
     silver = PythonOperator(
         task_id="silver_transform",
@@ -42,4 +42,4 @@ with DAG(
     )
 
     bronze >> silver >> gold
-    bronze_nih >> silver
+    bronze_ebi >> silver
