@@ -1,3 +1,4 @@
 # Apache Airflow (instalação local sem Docker).
 # Recomenda-se Python 3.10–3.12 conforme a matriz de versões da documentação oficial.
 apache-airflow>=2.8.0,<3.0.0
+pandas>=2.1,<2.3
