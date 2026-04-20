@@ -1,7 +1,7 @@
 """
 DAG exemplo medalhão: bronze → silver → gold.
 
-Cada etapa lê/escreve arquivos CSV em ``data/`` sob AIRFLOW_HOME.
+Cada etapa lê/escreve ficheiros em ``data/`` sob AIRFLOW_HOME.
 """
 
 from __future__ import annotations
@@ -11,10 +11,10 @@ from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from medallion.bronze import run_bronze
-from medallion.bronze_ebi import run_bronze_ebi
-from medallion.gold import run_gold
-from medallion.silver import run_silver
+from medallion.bronze.bronze import run_bronze
+from medallion.bronze.bronze_ebi import run_bronze_ebi
+from medallion.gold.gold import run_gold
+from medallion.silver.silver import run_silver
 
 with DAG(
     dag_id="medallion_sample_pipeline",
@@ -24,12 +24,12 @@ with DAG(
     catchup=False,
     tags=["mo430", "medalhao", "exemplo"],
 ) as dag:
-    bronze = PythonOperator(
-        task_id="bronze_ingest",
+    bronze_geo_soft_ingest = PythonOperator(
+        task_id="bronze_geo_soft_ingest",
         python_callable=run_bronze,
     )
-    bronze_ebi = PythonOperator(
-        task_id="bronze_ebi_ingest",
+    bronze_ebi_gxa_ingest = PythonOperator(
+        task_id="bronze_ebi_gxa_ingest",
         python_callable=run_bronze_ebi,
     )
     silver = PythonOperator(
@@ -41,5 +41,5 @@ with DAG(
         python_callable=run_gold,
     )
 
-    bronze >> silver >> gold
-    bronze_ebi >> silver
+    bronze_geo_soft_ingest >> silver >> gold
+    bronze_ebi_gxa_ingest >> silver

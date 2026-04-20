@@ -1,13 +1,12 @@
 """Camada silver: leitura da bronze, limpeza leve e modelo mais confiável."""
 
 from __future__ import annotations
-import sys
-from pathlib import Path
+
 import pandas as pd
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-from dags.medallion.data_cleaners import clean_geo_dataset
-from dags.medallion.paths import data_dir
+from utils.data_cleaners import clean_geo_dataset
+from utils.paths import data_dir
+
 
 def run_silver(**_context) -> None:
     bronze_dir = data_dir() / "bronze"

@@ -1,2 +1,3 @@
-# Pacote Python compartilhado (não contém DAGs).
+# Pacotes Python partilhados (não contêm DAGs).
 medallion/
+utils/

@@ -6,13 +6,19 @@ __pycache__/
 venv/
 env/
 
-# Airflow (AIRFLOW_HOME = raiz do repositório)
+# Airflow — se correr com AIRFLOW_HOME na raiz do clone (nao recomendado em /mnt/c/)
 airflow.cfg
 airflow.db
+airflow.db-shm
+airflow.db-wal
 logs/
 webserver_config.py
 airflow-webserver.pid
+airflow-scheduler.pid
+airflow-triggerer.pid
 standalone_admin_password.txt
+# Metadados / auth local (Airflow 2.7+)
+simple_auth_manager_passwords.json
 
 # IDE / OS
 .idea/

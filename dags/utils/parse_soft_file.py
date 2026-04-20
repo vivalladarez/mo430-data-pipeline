@@ -1,5 +1,7 @@
 import gzip
+
 import pandas as pd
+
 
 def _append_sample_value(sample_row, key, value):
     """Append value to key, preserving repeated fields."""

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import csv
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
-from medallion.paths import data_dir
+from utils.paths import data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -53,5 +53,3 @@ def run_bronze_nih(**context: Any) -> None:
             row_count += 1
 
     logger.info("Ingestao NIH finalizada com sucesso. Linhas processadas: %d", row_count)
-
-

@@ -8,10 +8,14 @@ Visão geral da raiz do repositório:
 
 ```text
 mo430-data-pipeline/
-├── dags/                      # DAGs e código importado pelo Airflow
+├── dags/
 │   ├── medallion_pipeline_dag.py
-│   ├── .airflowignore         # ignora pacotes que não são DAG
-│   └── medallion/             # bronze → silver → gold (Python)
+│   ├── .airflowignore         # ignora medallion/ e utils/ como DAGs
+│   ├── utils/                 # paths, parse_soft_file, data_cleaners
+│   └── medallion/
+│       ├── bronze/            # bronze.py, bronze_ebi.py, bronze_nih.py
+│       ├── silver/            # silver.py
+│       └── gold/              # gold.py
 ├── data/
 │   └── raw/                   # entrada de exemplo (versionada)
 │       └── sample.csv
@@ -27,8 +31,9 @@ mo430-data-pipeline/
 | Caminho | Conteúdo |
 |---------|----------|
 | `dags/` | Arquivos de DAG; o Airflow coloca esta pasta no `PYTHONPATH`. |
-| `dags/medallion/` | Funções da pipeline medalhão (`bronze`, `silver`, `gold`). |
-| `dags/.airflowignore` | Lista o que o scheduler **não** deve tratar como DAG (ex.: `medallion/`). |
+| `dags/utils/` | Código partilhado: `paths`, `parse_soft_file`, `data_cleaners`. |
+| `dags/medallion/bronze/`, `silver/`, `gold/` | Uma subpasta por camada medalhão. |
+| `dags/.airflowignore` | Ignora `medallion/` e `utils/` na descoberta de DAGs. |
 | `data/raw/` | Fonte bruta de exemplo (`sample.csv`). |
 | `data/bronze/`, `silver/`, `gold/` | Saídas geradas na execução (criadas automaticamente; no `.gitignore`). |
 | `include/`, `plugins/` | Convenção Airflow; podem ficar vazios neste projeto. |
@@ -100,7 +105,7 @@ airflow standalone
 
 **4.** Na UI: ative a DAG **`medallion_sample_pipeline`**, depois **Trigger DAG**.
 
-Fluxo das tasks: `bronze_ingest` → `silver_transform` → `gold_aggregate`.
+Fluxo das tasks: `bronze_geo_soft_ingest` e `bronze_ebi_gxa_ingest` (em paralelo) → `silver_transform` → `gold_aggregate`.
 
 Pela linha de comando:
 
@@ -108,21 +113,23 @@ Pela linha de comando:
 airflow dags trigger medallion_sample_pipeline
 ```
 
-**Arquivos produzidos** (sob `AIRFLOW_HOME` / raiz do clone):
+**Arquivos produzidos** (em `data/` do clone, via symlink quando usas `wsl-env.sh`):
 
-| Etapa | Saída |
-|-------|--------|
-| Bronze | `data/bronze/bronze_ingest.csv` |
-| Silver | `data/silver/silver_clean.csv` |
-| Gold | `data/gold/gold_por_categoria.csv` |
+| Etapa | Saída (exemplos) |
+|-------|------------------|
+| Bronze | `data/bronze/bronze_*.csv` (GEO SOFT, EBI, NIH, …) |
+| Silver | `data/silver/silver_*.csv` |
+| Gold | `data/gold/gold_por_categoria.csv` (se existir `silver_clean.csv` com colunas esperadas) |
 
 ## DAG de exemplo (resumo)
 
-| Camada | Arquivo | Ação |
-|--------|---------|------|
-| Bronze | `dags/medallion/bronze.py` | Lê `data/raw/sample.csv`, grava bronze com `ingested_at`. |
-| Silver | `dags/medallion/silver.py` | Lê bronze, deduplica por `id`, normaliza, grava silver. |
-| Gold | `dags/medallion/gold.py` | Lê silver, agrega por `categoria`, grava gold. |
+| Camada | Módulo | Ação |
+|--------|--------|------|
+| Bronze | `dags/medallion/bronze/bronze.py` | SOFT `.soft.gz` → CSV bronze. |
+| Bronze EBI | `dags/medallion/bronze/bronze_ebi.py` | API EBI → `bronze_ebi_expression.csv`. |
+| Silver | `dags/medallion/silver/silver.py` | Lê `bronze_*.csv`, `clean_geo_dataset`, grava silver. |
+| Gold | `dags/medallion/gold/gold.py` | Agregação (ex.: por `categoria`) em gold. |
+| Utilitários | `dags/utils/` | `paths`, `parse_soft_file`, `data_cleaners`. |
 
 ## Comandos úteis
 
