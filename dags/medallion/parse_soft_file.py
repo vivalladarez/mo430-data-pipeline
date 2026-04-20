@@ -12,7 +12,7 @@ def _append_sample_value(sample_row, key, value):
 
 
 def parse_soft_file(file_path):
-    """Parse GEO SOFT family file into one row per sample."""
+    """Parse GEO SOFT family file into CSV file"""
     samples = []
     current_sample = None
 
