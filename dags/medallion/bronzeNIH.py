@@ -55,22 +55,3 @@ def run_bronze_nih(**context: Any) -> None:
     logger.info("Ingestao NIH finalizada com sucesso. Linhas processadas: %d", row_count)
 
 
-# Futuro: migracao de ingestao estatica (CSV local) para API PicSureHpdsLib
-# 1) Autenticacao e bootstrap do cliente:
-#    - Ler token e endpoint de variaveis de ambiente.
-#    - Inicializar o cliente PicSureHpdsLib com timeout e retries.
-# 2) Execucao de consulta no NIH Biodata Catalyst (PIC-SURE):
-#    - Montar query com cohort/filtros clinicos e de bioinformatica.
-#    - Paginar respostas quando necessario para evitar estouro de memoria.
-# 3) Serializacao para formato tabular bronze:
-#    - Normalizar payload JSON para colunas CSV estaveis.
-#    - Preservar tipagem basica e valores ausentes de forma explicita.
-# 4) Rastreabilidade e versionamento:
-#    - Manter coluna ingested_at em UTC.
-#    - Incluir metadados de query/versionamento para reprodutibilidade.
-#
-# Variaveis de ambiente sugeridas para esta evolucao:
-# - PIC_SURE_TOKEN
-# - PIC_SURE_BASE_URL
-# - PIC_SURE_RESOURCE_UUID
-# - PIC_SURE_PROJECT_ID
