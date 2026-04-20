@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from collections import defaultdict
 
-from medallion.paths import data_dir
+from utils.paths import data_dir
 
 
 def run_gold(**_context) -> None:

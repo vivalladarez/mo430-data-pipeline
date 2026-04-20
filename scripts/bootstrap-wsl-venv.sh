@@ -27,4 +27,4 @@ cd "${_repo}"
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 echo "MO430: venv pronto em ${MO430_VENV}"
-echo "MO430: use: cd ${_repo} && source scripts/wsl-env.sh"
+echo "MO430: cd ${_repo} && source scripts/wsl-env.sh  (AIRFLOW_HOME fica em ~/mo430-airflow-runtime)"

@@ -14,7 +14,7 @@ import requests
 from requests import Response
 from requests.exceptions import HTTPError, RequestException, Timeout
 
-from medallion.paths import data_dir
+from utils.paths import data_dir
 
 logger = logging.getLogger(__name__)
 
