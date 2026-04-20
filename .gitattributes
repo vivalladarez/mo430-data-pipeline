@@ -1,0 +1,2 @@
+# Scripts shell para WSL/Linux: forcar LF (evita erro \r no Bash)
+*.sh text eol=lf

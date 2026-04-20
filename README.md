@@ -1,132 +1,128 @@
 # mo430-data-pipeline
 
-Pipeline de dados com **Apache Airflow** para orquestração, ingestão e processamento dos dados do projeto da disciplina MO430.
+Orquestração de pipeline de dados com **Apache Airflow** (instalação via **pip**, sem Docker), projeto da disciplina MO430.
 
-## Estrutura do repositório
+## Estrutura de pastas
 
-| Caminho | Função |
-|--------|--------|
-| `dags/` | Definições de DAGs e pacote `medallion/` (camadas **bronze**, **silver**, **gold**) |
-| `dags/.airflowignore` | Evita que o Airflow trate a pasta `medallion/` como arquivos de DAG |
-| `include/` | Pasta reservada para utilitários ou SQL (vazia por padrão) |
-| `plugins/` | Plugins Airflow (vazio por padrão) |
-| `data/raw/` | Fonte bruta de exemplo (`sample.csv`) |
-| `data/bronze/`, `data/silver/`, `data/gold/` | Saídas geradas ao rodar a DAG |
+Visão geral da raiz do repositório:
 
-O código compartilhado da pipeline fica em `dags/medallion/` porque essa área entra no `PYTHONPATH` do Airflow junto com a pasta de DAGs, o que evita erros de import.
-
-## Por que WSL2 no Windows?
-
-O Airflow **não é suportado no Windows nativo** para subir o webserver (erros como `No module named 'pwd'` são comuns). A forma mais simples de desenvolver no Windows é usar **WSL2** com **Ubuntu**, manter o projeto no disco `C:` (acessível em `/mnt/c/...`) e rodar **Python, venv e Airflow dentro do Linux**.
-
-Este projeto **não** usa Docker; dependências vêm só do `pip` e do `requirements.txt`.
-
-## Pré-requisitos (Windows)
-
-- Windows 10/11 com **WSL2** e uma distro **Ubuntu** (ex.: Ubuntu 24.04).
-- **Python 3.10–3.12** dentro do Ubuntu ([matriz de versões do Airflow](https://airflow.apache.org/docs/apache-airflow/stable/installation/supported-versions.html)).
-
-### Instalar WSL e Ubuntu (uma vez)
-
-No **PowerShell** (pode precisar de administrador na primeira vez):
-
-```powershell
-wsl --install -d Ubuntu-24.04
+```text
+mo430-data-pipeline/
+├── dags/                      # DAGs e código importado pelo Airflow
+│   ├── medallion_pipeline_dag.py
+│   ├── .airflowignore         # ignora pacotes que não são DAG
+│   └── medallion/             # bronze → silver → gold (Python)
+├── data/
+│   └── raw/                   # entrada de exemplo (versionada)
+│       └── sample.csv
+├── include/                   # utilitários / SQL (opcional)
+├── plugins/                   # plugins Airflow (opcional)
+├── scripts/
+│   ├── bootstrap-wsl-venv.sh  # WSL: primeira vez — venv + pip + normaliza LF dos .sh
+│   └── wsl-env.sh             # WSL: cada sessão — REPO, AIRFLOW_HOME e ativa o venv
+├── requirements.txt
+└── README.md
 ```
 
-Reinicie se o Windows pedir. Depois abra **Ubuntu** no menu Iniciar e crie usuário/senha Linux quando solicitado.
+| Caminho | Conteúdo |
+|---------|----------|
+| `dags/` | Arquivos de DAG; o Airflow coloca esta pasta no `PYTHONPATH`. |
+| `dags/medallion/` | Funções da pipeline medalhão (`bronze`, `silver`, `gold`). |
+| `dags/.airflowignore` | Lista o que o scheduler **não** deve tratar como DAG (ex.: `medallion/`). |
+| `data/raw/` | Fonte bruta de exemplo (`sample.csv`). |
+| `data/bronze/`, `silver/`, `gold/` | Saídas geradas na execução (criadas automaticamente; no `.gitignore`). |
+| `include/`, `plugins/` | Convenção Airflow; podem ficar vazios neste projeto. |
+| `scripts/bootstrap-wsl-venv.sh` | WSL: cria o venv em `~/.venvs/`, instala `requirements.txt`, corrige CRLF nos `.sh`. |
+| `scripts/wsl-env.sh` | WSL: define `REPO`, `AIRFLOW_HOME` e ativa o venv. |
 
-Confira se está em WSL **2**:
+## Pré-requisitos
 
-```powershell
-wsl -l -v
-```
+- **Windows:** WSL2 com **Ubuntu** (ex.: 24.04). No PowerShell, se ainda não tiver distro: `wsl --install -d Ubuntu-24.04` e reinicie se pedir; confira com `wsl -l -v` (**VERSION** = 2).
+- **Python 3.10–3.12** no Ubuntu ([compatibilidade com o Airflow](https://airflow.apache.org/docs/apache-airflow/stable/installation/supported-versions.html)).
 
-A coluna **VERSION** deve ser **2** para `Ubuntu-24.04` (ou o nome da sua distro).
+Todos os comandos abaixo são no **terminal Ubuntu (WSL)**. O venv **não** vem no Git; cada máquina cria o seu em `~/.venvs/mo430-data-pipeline` (ou outro caminho se definir `MO430_VENV` antes de `source scripts/wsl-env.sh`).
 
-## Fluxo local: WSL → ambiente virtual → instalação → Airflow
+## Instalação
 
-Tudo abaixo roda no **terminal Ubuntu** (ou `wsl -d Ubuntu-24.04` a partir do PowerShell). Ajuste o caminho se o clone não estiver em `OneDrive/.../mo430-data-pipeline`.
-
-### 1. Pacotes do sistema no Ubuntu (uma vez)
+**1.** Pacotes de sistema (uma vez):
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip python3-venv
+sudo apt install -y python3 python3-pip python3-venv python3-full
 ```
 
-### 2. Ir à raiz do repositório
-
-Exemplo (troque `vitor` pelo seu usuário Windows se for diferente):
+**2.** Entre na **raiz do clone** (ajuste `<usuario>` se precisar):
 
 ```bash
-cd "/mnt/c/Users/vitor/OneDrive/Documentos/mestrado/airflow/mo430-data-pipeline"
+cd "/mnt/c/Users/<usuario>/OneDrive/Documentos/mestrado/airflow/mo430-data-pipeline"
 ```
 
-### 3. Ambiente virtual **no Linux**
-
-O `.venv` criado no Windows **não** deve ser reutilizado no WSL (pastas `Scripts/` vs `bin/`). Dentro do Ubuntu, na raiz do projeto:
+**3.** Criar venv, instalar dependências e corrigir fins de linha dos scripts (recomendado; funciona em `/mnt/c/` / OneDrive):
 
 ```bash
-rm -rf .venv
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+bash scripts/bootstrap-wsl-venv.sh
 ```
 
-**Se aparecer** `bash: .venv/bin/activate: No such file or directory`:
-
-1. Confirme que está na raiz do clone (`ls` deve mostrar `requirements.txt` e `dags/`).
-2. Rode `ls .venv` (se der “No such file”, o venv ainda não existe: execute **só** `python3 -m venv .venv` e depois `source .venv/bin/activate`).
-3. Se existir **`.venv/Scripts/`** em vez de **`.venv/bin/`**, esse venv foi criado no **Windows**. Apague e recrie **no Ubuntu**: `rm -rf .venv`, depois os comandos do bloco acima a partir de `python3 -m venv .venv`.
-
-### 4. `AIRFLOW_HOME` na raiz do clone
-
-O Airflow grava `airflow.db`, `logs/` e configuração em `AIRFLOW_HOME`. Use **a própria raiz do repositório** (onde estão `dags/`, `data/`, `include/`).
+Conferir:
 
 ```bash
-export AIRFLOW_HOME="$(pwd)"
-echo "$AIRFLOW_HOME"
+test -f ~/.venvs/mo430-data-pipeline/bin/activate && echo "venv ok"
 ```
 
-Em cada **nova** sessão de terminal: `cd` de novo, `source .venv/bin/activate` e `export AIRFLOW_HOME="$(pwd)"`.
+Se o repo estiver só em disco Linux (ex.: `~/projetos/mo430-data-pipeline`), rode o `bash scripts/bootstrap-wsl-venv.sh` na mesma raiz; para venv dentro do repo, use `export MO430_VENV="$PWD/.venv"` antes do `bash scripts/bootstrap-wsl-venv.sh`.
 
-### 5. Subir o Airflow e abrir a interface
+## Uso
+
+**1.** Na raiz do clone, carregue variáveis e venv (Bash):
+
+```bash
+cd "/mnt/c/Users/<usuario>/OneDrive/Documentos/mestrado/airflow/mo430-data-pipeline"
+source scripts/wsl-env.sh
+```
+
+Isso define `REPO`, `AIRFLOW_HOME` e ativa `~/.venvs/mo430-data-pipeline`. Para outro venv, antes do `source`: `export MO430_VENV="$HOME/caminho/do/venv"` (a pasta precisa existir e ter `bin/activate`).
+
+Se aparecer aviso de venv inexistente ou erro de `\r` no Bash, rode de novo na raiz do clone: **`bash scripts/bootstrap-wsl-venv.sh`** (ele recria o venv e normaliza `*.sh` com Python, sem `sed -i` no OneDrive).
+
+**Antes do primeiro `airflow standalone` no WSL**, se já existir `airflow.cfg` / `airflow.db` gerados no Windows na mesma pasta, remova para evitar URL SQLite com `C:/...`:
+
+```bash
+rm -f airflow.cfg airflow.db
+```
+
+**2.** Subir interface e scheduler (SQLite local):
 
 ```bash
 airflow standalone
 ```
 
-Aguarde a mensagem com **usuário e senha** de admin (pode existir também `standalone_admin_password.txt` nessa pasta).
+**3.** No navegador: **http://localhost:8080** — login com usuário e senha exibidos no terminal (ou `standalone_admin_password.txt` na raiz do projeto).
 
-No **navegador do Windows**, abra: **http://localhost:8080** e faça login.
+**4.** Na UI: ative a DAG **`medallion_sample_pipeline`**, depois **Trigger DAG**.
 
-### 6. Próximas vezes (atalho)
+Fluxo das tasks: `bronze_ingest` → `silver_transform` → `gold_aggregate`.
 
-```bash
-cd "/mnt/c/Users/vitor/OneDrive/Documentos/mestrado/airflow/mo430-data-pipeline"
-source .venv/bin/activate
-export AIRFLOW_HOME="$(pwd)"
-airflow standalone
-```
-
-## DAG medalhão de exemplo
-
-- **DAG ID:** `medallion_sample_pipeline`
-- **Fluxo:** `bronze_ingest` → `silver_transform` → `gold_aggregate`
-
-Ative a DAG na UI e use **Trigger DAG** (ou, com o venv ativo e `AIRFLOW_HOME` definido):
+Pela linha de comando:
 
 ```bash
 airflow dags trigger medallion_sample_pipeline
 ```
 
-### O que cada camada faz (arquivos)
+**Arquivos produzidos** (sob `AIRFLOW_HOME` / raiz do clone):
 
-1. **Bronze** (`dags/medallion/bronze.py`): lê `data/raw/sample.csv` e grava `data/bronze/bronze_ingest.csv` com coluna `ingested_at`.
-2. **Silver** (`dags/medallion/silver.py`): lê a bronze, remove duplicata por `id`, normaliza texto e valor, grava `data/silver/silver_clean.csv`.
-3. **Gold** (`dags/medallion/gold.py`): lê a silver e grava `data/gold/gold_por_categoria.csv` com totais por `categoria`.
+| Etapa | Saída |
+|-------|--------|
+| Bronze | `data/bronze/bronze_ingest.csv` |
+| Silver | `data/silver/silver_clean.csv` |
+| Gold | `data/gold/gold_por_categoria.csv` |
+
+## DAG de exemplo (resumo)
+
+| Camada | Arquivo | Ação |
+|--------|---------|------|
+| Bronze | `dags/medallion/bronze.py` | Lê `data/raw/sample.csv`, grava bronze com `ingested_at`. |
+| Silver | `dags/medallion/silver.py` | Lê bronze, deduplica por `id`, normaliza, grava silver. |
+| Gold | `dags/medallion/gold.py` | Lê silver, agrega por `categoria`, grava gold. |
 
 ## Comandos úteis
 
@@ -135,27 +131,11 @@ airflow dags list
 airflow dags list-import-errors
 ```
 
-Se a DAG não carregar, o segundo comando mostra o traceback.
+## Modo manual (opcional)
 
-## Modo manual (opcional, ainda no WSL)
+Com venv ativo e `AIRFLOW_HOME` definido: `airflow db migrate`, crie usuário com `airflow users create ...`, depois um terminal com `airflow scheduler` e outro com `airflow webserver --port 8080`.
 
-Dois terminais Ubuntu, com venv ativo e `AIRFLOW_HOME` definido. Na primeira vez (ou após apagar `airflow.db`):
+## Notas
 
-```bash
-airflow db migrate
-airflow users create \
-  --username admin \
-  --firstname Admin \
-  --lastname User \
-  --role Admin \
-  --email admin@example.com \
-  --password admin
-```
-
-Terminal 1: `airflow scheduler`  
-Terminal 2: `airflow webserver --port 8080`  
-Acesse **http://localhost:8080**.
-
-## Observações
-
-- Pastas `data/bronze/`, `data/silver/` e `data/gold/` estão no `.gitignore`; o arquivo **`data/raw/sample.csv`** continua versionado como entrada de exemplo.
+- Dependências: apenas `requirements.txt` (sem Docker).
+- `data/raw/sample.csv` é versionado; `data/bronze|silver|gold/` são artefatos locais (`.gitignore`).
