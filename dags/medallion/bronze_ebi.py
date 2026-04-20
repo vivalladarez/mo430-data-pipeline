@@ -76,8 +76,13 @@ def _discover_experiments(
     accessions: list[str] = []
     start = 0
     page = 1
+    total_hits: int | None = None
 
     while len(accessions) < max_experiments:
+        if total_hits is not None and start >= total_hits:
+            logger.info("Fim da paginacao: start=%d >= total_hits=%d.", start, total_hits)
+            break
+
         params = {
             "query": query,
             "format": "json",
@@ -86,6 +91,12 @@ def _discover_experiments(
         }
         logger.info("Consultando pagina %d da busca EBI: %s", page, params)
         payload = _request_json(session, EBI_SEARCH_URL, params=params)
+        if total_hits is None:
+            raw_hit_count = payload.get("hitCount")
+            if isinstance(raw_hit_count, int):
+                total_hits = raw_hit_count
+                logger.info("Total de hits reportados pela API: %d", total_hits)
+
         entries = payload.get("entries", [])
         if not entries:
             logger.info("Nenhuma entrada adicional encontrada na pagina %d.", page)
