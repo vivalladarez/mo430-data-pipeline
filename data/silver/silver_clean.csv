@@ -1,0 +1,4 @@
+id,categoria,valor,observacao,ingested_at
+1,A,10.50,primeira linha,2026-04-20T01:05:44.629065+00:00
+2,B,20.00,segunda,2026-04-20T01:05:44.629065+00:00
+3,A,5.00,terceira,2026-04-20T01:05:44.629065+00:00
