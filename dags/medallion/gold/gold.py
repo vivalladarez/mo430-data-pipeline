@@ -3,9 +3,38 @@
 from __future__ import annotations
 
 import csv
+import shutil
 from collections import defaultdict
 
+from medallion.silver.silver import SILVER_EBI_CSV, SILVER_GEO_CSV
 from utils.paths import data_dir
+
+
+def run_gold_mock_1to1(**_context) -> None:
+    """Copia silver → gold sem agregação (mock 1:1), um CSV por origem.
+
+    Usa ``copyfile`` em vez de ``copy2``: em mounts (WSL, CIFS, OneDrive, etc.)
+    ``copystat``/``utime`` frequentemente falha com ``PermissionError``.
+    """
+    silver_dir = data_dir() / "silver"
+    gold_dir = data_dir() / "gold"
+    gold_dir.mkdir(parents=True, exist_ok=True)
+
+    pairs: list[tuple[str, str]] = [
+        (SILVER_GEO_CSV, "gold_mock_geo.csv"),
+        (SILVER_EBI_CSV, "gold_mock_ebi.csv"),
+    ]
+    copied = 0
+    for silver_name, gold_name in pairs:
+        src = silver_dir / silver_name
+        if src.is_file():
+            shutil.copyfile(src, gold_dir / gold_name)
+            copied += 1
+    if copied == 0:
+        raise FileNotFoundError(
+            f"Nenhum ficheiro silver encontrado em {silver_dir} "
+            f"(esperado pelo menos um de: {SILVER_GEO_CSV}, {SILVER_EBI_CSV})"
+        )
 
 
 def run_gold(**_context) -> None:

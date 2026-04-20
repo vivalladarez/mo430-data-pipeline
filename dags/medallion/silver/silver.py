@@ -4,25 +4,57 @@ from __future__ import annotations
 
 import pandas as pd
 
-from utils.data_cleaners import clean_geo_dataset
+from utils.data_cleaners import clean_ebi_expression_dataset, clean_geo_dataset
 from utils.paths import data_dir
 
+SILVER_GEO_CSV = "silver_geo.csv"
+SILVER_EBI_CSV = "silver_ebi.csv"
 
-def run_silver(**_context) -> None:
+
+def run_silver_geo(**_context) -> None:
+    """Consolida bronze GEO (*_family) em ``data/silver/silver_geo.csv``."""
     bronze_dir = data_dir() / "bronze"
     silver_dir = data_dir() / "silver"
     silver_dir.mkdir(parents=True, exist_ok=True)
 
-    files = sorted(bronze_dir.glob("bronze_*.csv"))
+    if not bronze_dir.is_dir():
+        raise FileNotFoundError(f"Diretorio bronze nao encontrado: {bronze_dir}")
 
-    if not files:
-        raise FileNotFoundError("Nenhum arquivo bronze encontrado")
+    geo_bronze = sorted(bronze_dir.glob("bronze_*_family.csv"))
+    if not geo_bronze:
+        raise FileNotFoundError(
+            f"Nenhum bronze_*_family.csv em {bronze_dir} (necessario para silver GEO)"
+        )
 
-    for file in files:
+    parts: list[pd.DataFrame] = []
+    for file in geo_bronze:
         df = pd.read_csv(file)
         df_clean = clean_geo_dataset(df)
         if df_clean.empty:
             raise ValueError(f"Arquivo sem linhas validas apos limpeza: {file.name}")
-        file_name = file.stem.replace("bronze_", "silver_", 1)
-        out_path = silver_dir / f"{file_name}.csv"
-        df_clean.to_csv(out_path, index=False)
+        df_clean = df_clean.copy()
+        df_clean["bronze_source_file"] = file.name
+        parts.append(df_clean)
+    geo_silver = pd.concat(parts, ignore_index=True)
+    if "sample_id" in geo_silver.columns:
+        geo_silver = geo_silver.drop_duplicates(subset=["sample_id"], keep="first")
+    geo_silver.to_csv(silver_dir / SILVER_GEO_CSV, index=False)
+
+
+def run_silver_ebi(**_context) -> None:
+    """Transforma bronze EBI em ``data/silver/silver_ebi.csv``."""
+    bronze_dir = data_dir() / "bronze"
+    silver_dir = data_dir() / "silver"
+    silver_dir.mkdir(parents=True, exist_ok=True)
+
+    ebi_bronze = bronze_dir / "bronze_ebi_expression.csv"
+    if not ebi_bronze.is_file():
+        raise FileNotFoundError(
+            f"Arquivo bronze EBI nao encontrado: {ebi_bronze} (necessario para silver EBI)"
+        )
+
+    df = pd.read_csv(ebi_bronze)
+    df_clean = clean_ebi_expression_dataset(df)
+    if df_clean.empty:
+        raise ValueError("Arquivo EBI sem linhas validas apos limpeza")
+    df_clean.to_csv(silver_dir / SILVER_EBI_CSV, index=False)

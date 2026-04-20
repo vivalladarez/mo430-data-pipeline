@@ -39,6 +39,26 @@ SILVER_CHAR_COLUMNS = (
     "char_vaccine_product",
 )
 
+EBI_REQUIRED_COLUMNS = (
+    "experiment_accession",
+    "gene_id",
+    "gene_name",
+    "comparison_label",
+    "expression_value",
+)
+EBI_SILVER_COLUMNS = (
+    "experiment_accession",
+    "experiment_type",
+    "species",
+    "gene_id",
+    "gene_name",
+    "comparison_label",
+    "expression_value",
+    "expression_value_numeric",
+    "source_url",
+    "ingested_at",
+)
+
 
 def _normalize_token(value: object) -> object:
     if not isinstance(value, str):
@@ -103,6 +123,26 @@ def _drop_rows_missing_required(df: pd.DataFrame, required_columns: Iterable[str
     if not present_required:
         return df
     return df.dropna(subset=present_required, how="any")
+
+
+def clean_ebi_expression_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    """Limpeza da bronze Expression Atlas (EBI) para a camada silver."""
+    df = df.copy()
+    df = df.apply(lambda column: column.map(_normalize_token))
+    df = df.dropna(how="all")
+    df = df.dropna(axis=1, how="all")
+    df = _drop_rows_missing_required(df, EBI_REQUIRED_COLUMNS)
+    if df.empty:
+        return df.reset_index(drop=True)
+    df = df.drop_duplicates(
+        subset=["experiment_accession", "gene_id", "comparison_label"], keep="first"
+    )
+    if "expression_value" in df.columns:
+        df["expression_value_numeric"] = pd.to_numeric(
+            df["expression_value"], errors="coerce"
+        )
+    keep = [col for col in EBI_SILVER_COLUMNS if col in df.columns]
+    return df[keep].reset_index(drop=True)
 
 
 def clean_geo_dataset(df: pd.DataFrame) -> pd.DataFrame:
