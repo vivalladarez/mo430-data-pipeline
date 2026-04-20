@@ -173,6 +173,7 @@ def run_bronze_ebi(**context: Any) -> None:
     page_size = int(os.environ.get("EBI_PAGE_SIZE", "25"))
     max_experiments = int(os.environ.get("EBI_MAX_EXPERIMENTS", "20"))
     max_rows_per_experiment = int(os.environ.get("EBI_MAX_ROWS_PER_EXPERIMENT", "5000"))
+    target_species = os.environ.get("EBI_TARGET_SPECIES", "Homo sapiens").strip()
 
     out_dir = data_dir() / "bronze"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -181,15 +182,17 @@ def run_bronze_ebi(**context: Any) -> None:
 
     logger.info("Iniciando ingestao EBI de expressao genica")
     logger.info(
-        "Busca=%s | page_size=%d | max_experiments=%d | max_rows_per_experiment=%d",
+        "Busca=%s | page_size=%d | max_experiments=%d | max_rows_per_experiment=%d | target_species=%s",
         query,
         page_size,
         max_experiments,
         max_rows_per_experiment,
+        target_species,
     )
 
     all_rows: list[dict[str, str]] = []
     processed_experiments = 0
+    skipped_by_species = 0
 
     with requests.Session() as session:
         accessions = _discover_experiments(session, query, page_size, max_experiments)
@@ -203,6 +206,16 @@ def run_bronze_ebi(**context: Any) -> None:
 
             experiment_type = str(experiment.get("type", "unknown"))
             species = str(experiment.get("species", "unknown"))
+            if species.casefold() != target_species.casefold():
+                skipped_by_species += 1
+                logger.info(
+                    "Experimento %s ignorado por especie (%s != %s).",
+                    accession,
+                    species,
+                    target_species,
+                )
+                continue
+
             download_path = str(experiment.get("urls", {}).get("download", ""))
             if not download_path:
                 logger.warning("Experimento %s sem URL de download; ignorando.", accession)
@@ -247,8 +260,9 @@ def run_bronze_ebi(**context: Any) -> None:
         writer.writerows(all_rows)
 
     logger.info(
-        "Ingestao EBI concluida. Experimentos processados: %d | Linhas extraidas: %d | Arquivo: %s",
+        "Ingestao EBI concluida. Experimentos processados: %d | Ignorados por especie: %d | Linhas extraidas: %d | Arquivo: %s",
         processed_experiments,
+        skipped_by_species,
         len(all_rows),
         out_path,
     )
