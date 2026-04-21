@@ -12,7 +12,7 @@ from typing import Any
 import requests
 from requests import HTTPError, RequestException, Timeout
 
-from medallion.silver.silver import SILVER_GEO_CSV
+from medallion.silver.silver import SILVER_GEO_NODES_PRINCIPAL_CSV
 from utils.paths import data_dir
 
 LOGGER = logging.getLogger(__name__)
@@ -330,8 +330,8 @@ def _write_output(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def run_gold_edge_ppi(**_context) -> None:
-    """Gera ``gold_edge_ppi.csv`` a partir de ``silver_geo.csv`` usando STRING API."""
-    silver_path = data_dir() / "silver" / SILVER_GEO_CSV
+    """Gera ``gold_edge_ppi.csv`` a partir de ``silver_geo_nodes_principal.csv``."""
+    silver_path = data_dir() / "silver" / SILVER_GEO_NODES_PRINCIPAL_CSV
     output_path = data_dir() / "gold" / "gold_edge_ppi.csv"
     required_score = DEFAULT_REQUIRED_SCORE
     call_counter = {"count": 0}

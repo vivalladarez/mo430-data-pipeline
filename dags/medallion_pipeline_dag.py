@@ -15,6 +15,7 @@ from airflow.operators.python import PythonOperator
 
 from medallion.bronze.bronze import run_bronze
 from medallion.bronze.bronze_ebi import run_bronze_ebi
+from medallion.gold.gold_edge_ppi import run_gold_edge_ppi
 from medallion.gold.gold import run_gold_geo_nodes
 from medallion.silver.silver import (
     run_silver_ebi_nodes,
