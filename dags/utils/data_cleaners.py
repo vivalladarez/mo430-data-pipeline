@@ -264,8 +264,8 @@ GEO_NOS_SILVER_COLUMNS = (
 def clean_geo_nos_nodes_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """Silver para tabelas NOS (ex.: NOS0001): colunas minúsculas e filtros básicos.
 
-    Remove linhas em que ``description`` contém *uncharacterized* ou *tRNA*
-    (case-insensitive).
+    Remove linhas em que ``description`` é nula ou vazia (após trim), ou contém
+    *uncharacterized* ou *tRNA* (case-insensitive).
     """
     df = df.copy()
     df.columns = [str(c).strip().lower() for c in df.columns]
@@ -286,7 +286,10 @@ def clean_geo_nos_nodes_dataset(df: pd.DataFrame) -> pd.DataFrame:
 
     if "description" in df.columns:
         desc = df["description"].fillna("").astype(str)
-        drop_mask = desc.str.contains(r"uncharacterized|trna", case=False, regex=True)
+        stripped = desc.str.strip()
+        drop_mask = stripped.eq("") | desc.str.contains(
+            r"uncharacterized|trna", case=False, regex=True
+        )
         df = df.loc[~drop_mask].copy()
 
     for col in ("geneid", "log2foldchange", "neg_log10_pvalue"):

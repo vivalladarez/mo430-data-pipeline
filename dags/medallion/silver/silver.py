@@ -50,7 +50,11 @@ def run_silver_geo_nodes(**_context) -> None:
 
 
 def run_silver_geo_nodes_principal(**_context) -> None:
-    """Silver NOS (genes principais) em ``data/silver/silver_geo_nodes_principal.csv``."""
+    """Silver NOS (genes principais) em ``data/silver/silver_geo_nodes_principal.csv``.
+
+    Linhas sem ``description`` (nula ou vazia) são descartadas em
+    ``clean_geo_nos_nodes_dataset``.
+    """
     bronze_dir = data_dir() / "bronze"
     silver_dir = data_dir() / "silver"
     silver_dir.mkdir(parents=True, exist_ok=True)
