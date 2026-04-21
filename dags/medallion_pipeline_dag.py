@@ -54,6 +54,10 @@ with DAG(
         task_id="gold_geo_nodes",
         python_callable=run_gold_geo_nodes,
     )
+    gold_edge_ppi = PythonOperator(
+        task_id="gold_edge_ppi",
+        python_callable=run_gold_edge_ppi,
+    )
 
     bronze_geo_soft_ingest >> silver_geo_nodes
     bronze_geo_soft_ingest >> silver_geo_nodes_principal
