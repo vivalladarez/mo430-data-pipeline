@@ -62,15 +62,15 @@ EBI_SILVER_COLUMNS = (
 GEO_GENE_REQUIRED_COLUMNS = ("ingested_at",)
 GEO_GENE_SILVER_COLUMNS = (
     "series_id",
-    "gene_symbol",
-    "gene_id",
-    "gene_accession",
+    "symbol",
+    "geneid",
+    "gb_acc",
     "description",
-    "p_value",
-    "p_adj",
-    "log_fc",
-    "statistic",
-    "base_mean",
+    "pvalue",
+    "padj",
+    "log2foldchange",
+    "stat",
+    "basemean",
     "ingested_at",
     "bronze_source_file",
 )
@@ -220,28 +220,28 @@ def clean_geo_gene_dataset(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df.reset_index(drop=True)
 
-    # Mapeia nomes alternativos → schema padrão
+    # Mapeia nomes alternativos → nomes canônicos (minúsculos) para padronização.
     rename_map = {
-        "Symbol": "gene_symbol",
-        "ID": "gene_symbol",
-        "GeneID": "gene_id",
-        "GB_ACC": "gene_accession",
+        "ID": "symbol",
+        "Symbol": "symbol",
+        "GeneID": "geneid",
+        "GB_ACC": "gb_acc",
         "Description": "description",
-        "padj": "p_adj",
-        "adj.P.Val": "p_adj",
-        "pvalue": "p_value",
-        "P.Value": "p_value",
-        "log2FoldChange": "log_fc",
-        "logFC": "log_fc",
-        "stat": "statistic",
-        "t": "statistic",
-        "baseMean": "base_mean",
-        "B": "base_mean",
+        "pvalue": "pvalue",
+        "P.Value": "pvalue",
+        "padj": "padj",
+        "adj.P.Val": "padj",
+        "log2FoldChange": "log2foldchange",
+        "logFC": "log2foldchange",
+        "stat": "stat",
+        "t": "stat",
+        "baseMean": "basemean",
+        "B": "basemean",
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
     # Tipos numéricos quando aplicável
-    for col in ("p_value", "p_adj", "log_fc", "statistic", "base_mean"):
+    for col in ("pvalue", "padj", "log2foldchange", "stat", "basemean"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
