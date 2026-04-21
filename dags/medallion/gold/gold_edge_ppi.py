@@ -26,6 +26,7 @@ NETWORK_CHUNK_SIZE = 80
 REQUEST_PAUSE_SECONDS = 0.2
 
 OUTPUT_COLUMNS = [
+    "symbol",
     "geneid",
     "node2",
     "node1_string_id",
@@ -275,6 +276,7 @@ def _build_ppi_rows(
                     raw_rows.append(
                         {
                             "geneid": source_gene.geneid,
+                            "symbol": source_gene.symbol or source_gene.preferred_name,
                             "node2": pref_b or source_b,
                             "node1_string_id": source_a,
                             "node2_string_id": source_b,
@@ -289,6 +291,7 @@ def _build_ppi_rows(
                     raw_rows.append(
                         {
                             "geneid": source_gene.geneid,
+                            "symbol": source_gene.symbol or source_gene.preferred_name,
                             "node2": pref_a or source_a,
                             "node1_string_id": source_b,
                             "node2_string_id": source_a,
