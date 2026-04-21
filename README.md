@@ -13,9 +13,9 @@ mo430-data-pipeline/
 │   ├── .airflowignore         # ignora medallion/ e utils/ como DAGs
 │   ├── utils/                 # paths, parse_soft_file, data_cleaners
 │   └── medallion/
-│       ├── bronze/            # bronze.py, bronze_ebi.py, bronze_nih.py
-│       ├── silver/            # silver.py
-│       └── gold/              # gold.py
+│       ├── bronze/            # bronze.py, bronze_ebi.py, bronze_geo.ipynb
+│       ├── silver/            # silver.py, silver_geo_nodes.ipynb, silver_ebi_nodes.ipynb
+│       └── gold/              # gold.py, gold_geo_nodes.ipynb
 ├── data/
 │   └── raw/                   # entrada de exemplo (versionada)
 │       └── sample.csv
@@ -105,7 +105,7 @@ airflow standalone
 
 **4.** Na UI: ative a DAG **`medallion_sample_pipeline`**, depois **Trigger DAG**.
 
-Fluxo das tasks: `bronze_geo_soft_ingest` e `bronze_ebi_gxa_ingest` (em paralelo) → `silver_transform` → `gold_aggregate`.
+Fluxo (resumo): `bronze_geo_soft_ingest` → `silver_geo_nodes` e `silver_geo_nodes_principal` → `gold_geo_nodes`; `bronze_ebi_gxa_ingest` → `silver_ebi_nodes` (sem dependência da gold GEO).
 
 Pela linha de comando:
 
@@ -117,18 +117,18 @@ airflow dags trigger medallion_sample_pipeline
 
 | Etapa | Saída (exemplos) |
 |-------|------------------|
-| Bronze | `data/bronze/bronze_*.csv` (GEO SOFT, EBI, NIH, …) |
-| Silver | `data/silver/silver_*.csv` |
-| Gold | `data/gold/gold_por_categoria.csv` (se existir `silver_clean.csv` com colunas esperadas) |
+| Bronze | `data/bronze/bronze_*.csv` (GEO CSV em `raw/geo`, EBI, …) |
+| Silver | `data/silver/silver_geo_nodes.csv`, `silver_geo_nodes_principal.csv`, `silver_ebi_nodes.csv`, … |
+| Gold | `data/gold/gold_geo_nodes.csv` |
 
 ## DAG de exemplo (resumo)
 
 | Camada | Módulo | Ação |
 |--------|--------|------|
-| Bronze | `dags/medallion/bronze/bronze.py` | SOFT `.soft.gz` → CSV bronze. |
+| Bronze | `dags/medallion/bronze/bronze.py` | CSV em `data/raw/geo/*.csv` → `data/bronze/bronze_*.csv`. |
 | Bronze EBI | `dags/medallion/bronze/bronze_ebi.py` | API EBI → `bronze_ebi_expression.csv`. |
-| Silver | `dags/medallion/silver/silver.py` | Lê `bronze_*.csv`, `clean_geo_dataset`, grava silver. |
-| Gold | `dags/medallion/gold/gold.py` | Agregação (ex.: por `categoria`) em gold. |
+| Silver | `dags/medallion/silver/silver.py` | GSE tabular, NOS e EBI → silver (ver `clean_geo_gene_dataset`, etc.). |
+| Gold | `dags/medallion/gold/gold.py` | `gold_geo_nodes` (join `silver_geo_nodes.csv` × `silver_geo_nodes_principal.csv`). |
 | Utilitários | `dags/utils/` | `paths`, `parse_soft_file`, `data_cleaners`. |
 
 ## Comandos úteis
