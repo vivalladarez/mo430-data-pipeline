@@ -210,7 +210,7 @@ def clean_geo_gene_dataset(df: pd.DataFrame) -> pd.DataFrame:
     """Limpeza/padronização de GEO em formato tabular por gene (CSV bruto).
 
     Aceita variações comuns de colunas (ex.: DESeq2 / limma) e normaliza para um
-    schema único, para consolidação em `silver_geo.csv`.
+    schema único, para consolidação em `silver_geo_nodes.csv`.
     """
     df = df.copy()
     df = df.apply(lambda column: column.map(_normalize_token))
@@ -246,4 +246,55 @@ def clean_geo_gene_dataset(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     keep = [col for col in GEO_GENE_SILVER_COLUMNS if col in df.columns]
+    return df[keep].reset_index(drop=True)
+
+
+GEO_NOS_SILVER_COLUMNS = (
+    "symbol",
+    "description",
+    "geneid",
+    "log2foldchange",
+    "neg_log10_pvalue",
+    "ingested_at",
+    "bronze_source_file",
+    "dataset_id",
+)
+
+
+def clean_geo_nos_nodes_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    """Silver para tabelas NOS (ex.: NOS0001): colunas minúsculas e filtros básicos.
+
+    Remove linhas em que ``description`` é nula ou vazia (após trim), ou contém
+    *uncharacterized* ou *tRNA* (case-insensitive).
+    """
+    df = df.copy()
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    odd_to_std: dict[str, str] = {}
+    for col in df.columns:
+        c = col.replace(" ", "")
+        if c in ("log2(foldchange)", "log2(fold_change)"):
+            odd_to_std[col] = "log2foldchange"
+        elif col.replace(" ", "").lower() in ("-log10(pvalue)", "-log10(p)"):
+            odd_to_std[col] = "neg_log10_pvalue"
+    if odd_to_std:
+        df = df.rename(columns=odd_to_std)
+
+    df = df.apply(lambda column: column.map(_normalize_token))
+    df = df.dropna(how="all")
+    df = df.dropna(axis=1, how="all")
+
+    if "description" in df.columns:
+        desc = df["description"].fillna("").astype(str)
+        stripped = desc.str.strip()
+        drop_mask = stripped.eq("") | desc.str.contains(
+            r"uncharacterized|trna", case=False, regex=True
+        )
+        df = df.loc[~drop_mask].copy()
+
+    for col in ("geneid", "log2foldchange", "neg_log10_pvalue"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    keep = [col for col in GEO_NOS_SILVER_COLUMNS if col in df.columns]
     return df[keep].reset_index(drop=True)

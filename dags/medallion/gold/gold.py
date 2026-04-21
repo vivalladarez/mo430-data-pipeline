@@ -2,73 +2,51 @@
 
 from __future__ import annotations
 
-import csv
-import shutil
-from collections import defaultdict
+import pandas as pd
 
-from medallion.silver.silver import SILVER_EBI_CSV, SILVER_GEO_CSV
+from medallion.silver.silver import (
+    SILVER_GEO_NODES_CSV,
+    SILVER_GEO_NODES_PRINCIPAL_CSV,
+)
 from utils.paths import data_dir
 
+GOLD_GEO_NODES_CSV = "gold_geo_nodes.csv"
 
-def run_gold_mock_1to1(**_context) -> None:
-    """Copia silver → gold sem agregação (mock 1:1), um CSV por origem.
 
-    Usa ``copyfile`` em vez de ``copy2``: em mounts (WSL, CIFS, OneDrive, etc.)
-    ``copystat``/``utime`` frequentemente falha com ``PermissionError``.
+def run_gold_geo_nodes(**_context) -> None:
+    """Gold GEO: cruza ``silver_geo_nodes`` com ``silver_geo_nodes_principal`` por ``geneid``.
+
+    Mantém apenas genes presentes em NOS (inner join). Grava
+    ``data/gold/gold_geo_nodes.csv``.
+
+    Colunas que existem nos dois CSVs ficam só com os valores do GSE; do NOS
+    entram apenas colunas que não existem no GSE (ex.: ``neg_log10_pvalue``,
+    ``dataset_id``), sem sufixos nem prefixos.
     """
     silver_dir = data_dir() / "silver"
     gold_dir = data_dir() / "gold"
     gold_dir.mkdir(parents=True, exist_ok=True)
 
-    pairs: list[tuple[str, str]] = [
-        (SILVER_GEO_CSV, "gold_mock_geo.csv"),
-        (SILVER_EBI_CSV, "gold_mock_ebi.csv"),
-    ]
-    copied = 0
-    for silver_name, gold_name in pairs:
-        src = silver_dir / silver_name
-        if src.is_file():
-            shutil.copyfile(src, gold_dir / gold_name)
-            copied += 1
-    if copied == 0:
-        raise FileNotFoundError(
-            f"Nenhum ficheiro silver encontrado em {silver_dir} "
-            f"(esperado pelo menos um de: {SILVER_GEO_CSV}, {SILVER_EBI_CSV})"
-        )
+    geo_path = silver_dir / SILVER_GEO_NODES_CSV
+    nos_path = silver_dir / SILVER_GEO_NODES_PRINCIPAL_CSV
+    out_path = gold_dir / GOLD_GEO_NODES_CSV
 
+    if not geo_path.is_file():
+        raise FileNotFoundError(f"Silver GEO nao encontrado: {geo_path}")
+    if not nos_path.is_file():
+        raise FileNotFoundError(f"Silver geo nos nodes nao encontrado: {nos_path}")
 
-def run_gold(**_context) -> None:
-    silver_path = data_dir() / "silver" / "silver_clean.csv"
-    gold_dir = data_dir() / "gold"
-    gold_dir.mkdir(parents=True, exist_ok=True)
-    out_path = gold_dir / "gold_por_categoria.csv"
+    geo = pd.read_csv(geo_path)
+    nos = pd.read_csv(nos_path)
+    if "geneid" not in geo.columns or "geneid" not in nos.columns:
+        raise ValueError("Ambos os CSVs precisam da coluna 'geneid' para o cruzamento.")
 
-    if not silver_path.is_file():
-        raise FileNotFoundError(f"Arquivo silver não encontrado: {silver_path}")
+    geo = geo.copy()
+    nos = nos.copy()
+    geo["geneid"] = pd.to_numeric(geo["geneid"], errors="coerce").astype("Int64")
+    nos["geneid"] = pd.to_numeric(nos["geneid"], errors="coerce").astype("Int64")
 
-    totals: dict[str, float] = defaultdict(float)
-    counts: dict[str, int] = defaultdict(int)
-
-    with silver_path.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            cat = (row.get("categoria") or "").strip() or "UNKNOWN"
-            try:
-                totals[cat] += float(row.get("valor", "0"))
-            except ValueError:
-                pass
-            counts[cat] += 1
-
-    with out_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f, fieldnames=["categoria", "total_valor", "qtd_linhas"]
-        )
-        writer.writeheader()
-        for cat in sorted(totals.keys()):
-            writer.writerow(
-                {
-                    "categoria": cat,
-                    "total_valor": f"{totals[cat]:.2f}",
-                    "qtd_linhas": str(counts[cat]),
-                }
-            )
+    nos_only_cols = [c for c in nos.columns if c not in geo.columns]
+    nos_add = nos[["geneid", *nos_only_cols]]
+    merged = geo.merge(nos_add, on="geneid", how="inner")
+    merged.to_csv(out_path, index=False)
