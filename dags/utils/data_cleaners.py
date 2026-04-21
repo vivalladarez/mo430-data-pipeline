@@ -59,6 +59,22 @@ EBI_SILVER_COLUMNS = (
     "ingested_at",
 )
 
+GEO_GENE_REQUIRED_COLUMNS = ("ingested_at",)
+GEO_GENE_SILVER_COLUMNS = (
+    "series_id",
+    "gene_symbol",
+    "gene_id",
+    "gene_accession",
+    "description",
+    "p_value",
+    "p_adj",
+    "log_fc",
+    "statistic",
+    "base_mean",
+    "ingested_at",
+    "bronze_source_file",
+)
+
 
 def _normalize_token(value: object) -> object:
     if not isinstance(value, str):
@@ -188,3 +204,46 @@ def clean_geo_dataset(df: pd.DataFrame) -> pd.DataFrame:
     df = df[keep_columns]
 
     return df.reset_index(drop=True)
+
+
+def clean_geo_gene_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    """Limpeza/padronização de GEO em formato tabular por gene (CSV bruto).
+
+    Aceita variações comuns de colunas (ex.: DESeq2 / limma) e normaliza para um
+    schema único, para consolidação em `silver_geo.csv`.
+    """
+    df = df.copy()
+    df = df.apply(lambda column: column.map(_normalize_token))
+    df = df.dropna(how="all")
+    df = df.dropna(axis=1, how="all")
+    df = _drop_rows_missing_required(df, GEO_GENE_REQUIRED_COLUMNS)
+    if df.empty:
+        return df.reset_index(drop=True)
+
+    # Mapeia nomes alternativos → schema padrão
+    rename_map = {
+        "Symbol": "gene_symbol",
+        "ID": "gene_symbol",
+        "GeneID": "gene_id",
+        "GB_ACC": "gene_accession",
+        "Description": "description",
+        "padj": "p_adj",
+        "adj.P.Val": "p_adj",
+        "pvalue": "p_value",
+        "P.Value": "p_value",
+        "log2FoldChange": "log_fc",
+        "logFC": "log_fc",
+        "stat": "statistic",
+        "t": "statistic",
+        "baseMean": "base_mean",
+        "B": "base_mean",
+    }
+    df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+
+    # Tipos numéricos quando aplicável
+    for col in ("p_value", "p_adj", "log_fc", "statistic", "base_mean"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    keep = [col for col in GEO_GENE_SILVER_COLUMNS if col in df.columns]
+    return df[keep].reset_index(drop=True)

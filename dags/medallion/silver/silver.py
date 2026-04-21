@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from utils.data_cleaners import clean_ebi_expression_dataset, clean_geo_dataset
+from utils.data_cleaners import clean_ebi_expression_dataset, clean_geo_gene_dataset
 from utils.paths import data_dir
 
 SILVER_GEO_CSV = "silver_geo.csv"
@@ -12,7 +12,7 @@ SILVER_EBI_CSV = "silver_ebi.csv"
 
 
 def run_silver_geo(**_context) -> None:
-    """Consolida bronze GEO (*_family) em ``data/silver/silver_geo.csv``."""
+    """Consolida bronze GEO (CSVs tabulares por gene) em ``data/silver/silver_geo.csv``."""
     bronze_dir = data_dir() / "bronze"
     silver_dir = data_dir() / "silver"
     silver_dir.mkdir(parents=True, exist_ok=True)
@@ -20,24 +20,27 @@ def run_silver_geo(**_context) -> None:
     if not bronze_dir.is_dir():
         raise FileNotFoundError(f"Diretorio bronze nao encontrado: {bronze_dir}")
 
-    geo_bronze = sorted(bronze_dir.glob("bronze_*_family.csv"))
+    geo_bronze = sorted(
+        file
+        for file in bronze_dir.glob("bronze_GSE*.csv")
+        if not file.name.endswith("_family.csv")
+    )
     if not geo_bronze:
         raise FileNotFoundError(
-            f"Nenhum bronze_*_family.csv em {bronze_dir} (necessario para silver GEO)"
+            f"Nenhum bronze GEO encontrado em {bronze_dir} (esperado bronze_GSE*.csv)"
         )
 
     parts: list[pd.DataFrame] = []
     for file in geo_bronze:
         df = pd.read_csv(file)
-        df_clean = clean_geo_dataset(df)
+        df_clean = clean_geo_gene_dataset(df)
         if df_clean.empty:
             raise ValueError(f"Arquivo sem linhas validas apos limpeza: {file.name}")
         df_clean = df_clean.copy()
         df_clean["bronze_source_file"] = file.name
+        df_clean["series_id"] = file.stem.replace("bronze_", "", 1)
         parts.append(df_clean)
     geo_silver = pd.concat(parts, ignore_index=True)
-    if "sample_id" in geo_silver.columns:
-        geo_silver = geo_silver.drop_duplicates(subset=["sample_id"], keep="first")
     geo_silver.to_csv(silver_dir / SILVER_GEO_CSV, index=False)
 
 
