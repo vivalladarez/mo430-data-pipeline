@@ -12,7 +12,7 @@ from typing import Any
 import requests
 from requests import HTTPError, RequestException, Timeout
 
-from medallion.silver.silver import SILVER_GEO_CSV
+from medallion.silver.silver import SILVER_GEO_NODES_PRINCIPAL_CSV
 from utils.paths import data_dir
 
 LOGGER = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ NETWORK_CHUNK_SIZE = 80
 REQUEST_PAUSE_SECONDS = 0.2
 
 OUTPUT_COLUMNS = [
+    "symbol",
     "geneid",
     "node2",
     "node1_string_id",
@@ -275,6 +276,7 @@ def _build_ppi_rows(
                     raw_rows.append(
                         {
                             "geneid": source_gene.geneid,
+                            "symbol": source_gene.symbol or source_gene.preferred_name,
                             "node2": pref_b or source_b,
                             "node1_string_id": source_a,
                             "node2_string_id": source_b,
@@ -289,6 +291,7 @@ def _build_ppi_rows(
                     raw_rows.append(
                         {
                             "geneid": source_gene.geneid,
+                            "symbol": source_gene.symbol or source_gene.preferred_name,
                             "node2": pref_a or source_a,
                             "node1_string_id": source_b,
                             "node2_string_id": source_a,
@@ -330,8 +333,8 @@ def _write_output(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def run_gold_edge_ppi(**_context) -> None:
-    """Gera ``gold_edge_ppi.csv`` a partir de ``silver_geo.csv`` usando STRING API."""
-    silver_path = data_dir() / "silver" / SILVER_GEO_CSV
+    """Gera ``gold_edge_ppi.csv`` a partir de ``silver_geo_nodes_principal.csv``."""
+    silver_path = data_dir() / "silver" / SILVER_GEO_NODES_PRINCIPAL_CSV
     output_path = data_dir() / "gold" / "gold_edge_ppi.csv"
     required_score = DEFAULT_REQUIRED_SCORE
     call_counter = {"count": 0}

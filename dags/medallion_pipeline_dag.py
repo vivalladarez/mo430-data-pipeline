@@ -1,9 +1,8 @@
 """
-DAG exemplo medalhão: bronze → silver (GEO GSE, GEO NOS, EBI) → gold (só ``gold_geo_nodes``).
+DAG exemplo medalhão: bronze → silver (GEO GSE, GEO NOS, EBI) → gold.
 
 Cada etapa lê/escreve ficheiros em ``data/`` sob AIRFLOW_HOME.
-A única task gold cruza ``silver_geo_nodes`` com ``silver_geo_nodes_principal`` (ver
-``dags/medallion/gold/gold_geo_nodes.ipynb``).
+As tasks gold geram ``gold_geo_nodes`` e ``gold_edge_ppi``.
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ from airflow.operators.python import PythonOperator
 
 from medallion.bronze.bronze import run_bronze
 from medallion.bronze.bronze_ebi import run_bronze_ebi
+from medallion.gold.gold_edge_ppi import run_gold_edge_ppi
 from medallion.gold.gold import run_gold_geo_nodes
 from medallion.silver.silver import (
     run_silver_ebi_nodes,
@@ -62,4 +62,5 @@ with DAG(
     bronze_geo_soft_ingest >> silver_geo_nodes
     bronze_geo_soft_ingest >> silver_geo_nodes_principal
     [silver_geo_nodes, silver_geo_nodes_principal] >> gold_geo_nodes
+    silver_geo_nodes_principal >> gold_edge_ppi
     bronze_ebi_gxa_ingest >> silver_ebi_nodes
