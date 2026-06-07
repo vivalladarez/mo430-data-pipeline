@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>map05171 — log2 fold change 3D isométrico</title>
+<style>
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	background: #1a1f2e;
+	color: #eee;
+	overflow: hidden;
+}
+#ui {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	padding: 12px 16px;
+	background: linear-gradient(180deg, rgba(26,31,46,0.95) 70%, transparent);
+	pointer-events: none;
+}
+#ui h1 {
+	margin: 0 0 6px 0;
+	font-size: 18px;
+	font-weight: 600;
+}
+#ui p {
+	margin: 0 0 10px 0;
+	font-size: 13px;
+	color: #aab;
+	max-width: 720px;
+}
+.legend {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+	font-size: 12px;
+}
+.legend-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.swatch {
+	width: 14px;
+	height: 14px;
+	border-radius: 2px;
+	border: 1px solid rgba(255,255,255,0.3);
+}
+.swatch.pos { background: #b2182b; }
+.swatch.neg { background: #2166ac; }
+#tooltip {
+	position: fixed;
+	display: none;
+	padding: 8px 10px;
+	background: rgba(0,0,0,0.85);
+	border: 1px solid #555;
+	border-radius: 4px;
+	font-size: 12px;
+	pointer-events: none;
+	z-index: 20;
+	white-space: nowrap;
+}
+#canvas-host {
+	width: 100vw;
+	height: 100vh;
+}
+#hint {
+	position: fixed;
+	bottom: 12px;
+	right: 16px;
+	font-size: 11px;
+	color: #889;
+	z-index: 10;
+}
+</style>
+</head>
+<body>
+<div id="ui">
+	<h1>map05171 — barras 3D isométricas (log2 fold change)</h1>
+	<p>Altura da barra = módulo |log2FC|. Vermelho = positivo · Azul = negativo. Dados: silver_pathway_areasv1.csv (96 áreas).</p>
+	<div class="legend">
+		<div class="legend-item"><span class="swatch pos"></span> log2FC &gt; 0 (até 1.68)</div>
+		<div class="legend-item"><span class="swatch neg"></span> log2FC &lt; 0 (até -2.95)</div>
+	</div>
+</div>
+<div id="tooltip"></div>
+<div id="hint">Arraste para girar · scroll para zoom</div>
+<div id="canvas-host"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const AREAS = [{"id": "8FAC7FE1", "symbols": ["ACE"], "entries": [{"symbol": "ACE", "log2": 0.287258}], "log2": 0.287258, "abs": 0.287258, "cx": 241.0, "cy": 687.5, "w": 46.0, "h": 17.0}, {"id": "4F9E7AFE", "symbols": ["ADAM17"], "entries": [{"symbol": "ADAM17", "log2": 0.0861969}], "log2": 0.0861969, "abs": 0.0861969, "cx": 411.0, "cy": 764.5, "w": 46.0, "h": 17.0}, {"id": "2BB58713", "symbols": ["TNF"], "entries": [{"symbol": "TNF", "log2": -1.28951}], "log2": -1.28951, "abs": 1.28951, "cx": 375.0, "cy": 792.5, "w": 46.0, "h": 17.0}, {"id": "12BA0AA2", "symbols": ["IL6R"], "entries": [{"symbol": "IL6R", "log2": -0.539295}], "log2": -0.539295, "abs": 0.539295, "cx": 375.0, "cy": 841.5, "w": 46.0, "h": 17.0}, {"id": "6A6C7495", "symbols": ["IL6R"], "entries": [{"symbol": "IL6R", "log2": -0.539295}], "log2": -0.539295, "abs": 0.539295, "cx": 411.0, "cy": 1121.5, "w": 46.0, "h": 17.0}, {"id": "C4DEF086", "symbols": ["STAT3"], "entries": [{"symbol": "STAT3", "log2": -0.248366}], "log2": -0.248366, "abs": 0.248366, "cx": 721.0, "cy": 1130.5, "w": 46.0, "h": 17.0}, {"id": "FBDCD8F0", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 314.0, "cy": 1130.5, "w": 46.0, "h": 17.0}, {"id": "E34D2C22", "symbols": ["JAK1"], "entries": [{"symbol": "JAK1", "log2": 0.192438}], "log2": 0.192438, "abs": 0.192438, "cx": 457.0, "cy": 1130.5, "w": 46.0, "h": 17.0}, {"id": "3AD77737", "symbols": ["IL1B"], "entries": [{"symbol": "IL1B", "log2": -2.94623}], "log2": -2.94623, "abs": 2.94623, "cx": 1218.0, "cy": 1431.5, "w": 46.0, "h": 17.0}, {"id": "AA2FEB2B", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 1270.0, "cy": 1408.5, "w": 46.0, "h": 17.0}, {"id": "C143DF32", "symbols": ["TNF"], "entries": [{"symbol": "TNF", "log2": -1.28951}], "log2": -1.28951, "abs": 1.28951, "cx": 1218.0, "cy": 1408.5, "w": 46.0, "h": 17.0}, {"id": "23C38330", "symbols": ["IL12A"], "entries": [{"symbol": "IL12A", "log2": 0.357384}], "log2": 0.357384, "abs": 0.357384, "cx": 1270.0, "cy": 1431.5, "w": 46.0, "h": 17.0}, {"id": "56475BC1", "symbols": ["TLR3"], "entries": [{"symbol": "TLR3", "log2": 0.10996}], "log2": 0.10996, "abs": 0.10996, "cx": 551.0, "cy": 1483.5, "w": 46.0, "h": 17.0}, {"id": "563FF232", "symbols": ["TLR7", "TLR8"], "entries": [{"symbol": "TLR7", "log2": -0.345528}, {"symbol": "TLR8", "log2": 0.408112}], "log2": 0.031291999999999986, "abs": 0.031291999999999986, "cx": 551.0, "cy": 1438.5, "w": 46.0, "h": 17.0}, {"id": "6D6D6606", "symbols": ["TLR2", "TLR4"], "entries": [{"symbol": "TLR2", "log2": -0.446929}, {"symbol": "TLR4", "log2": -0.0566339}], "log2": -0.25178145, "abs": 0.25178145, "cx": 411.0, "cy": 1366.5, "w": 46.0, "h": 17.0}, {"id": "4AE77FDA", "symbols": ["RIGI"], "entries": [{"symbol": "RIGI", "log2": 0.0193085}], "log2": 0.0193085, "abs": 0.0193085, "cx": 599.0, "cy": 1563.5, "w": 46.0, "h": 17.0}, {"id": "DE7C4829", "symbols": ["MYD88"], "entries": [{"symbol": "MYD88", "log2": 0.0767599}], "log2": 0.0767599, "abs": 0.0767599, "cx": 513.0, "cy": 1366.5, "w": 46.0, "h": 17.0}, {"id": "51E3C051", "symbols": ["IRAK1", "IRAK4"], "entries": [{"symbol": "IRAK1", "log2": -0.263371}, {"symbol": "IRAK4", "log2": 0.187798}], "log2": -0.037786500000000015, "abs": 0.037786500000000015, "cx": 615.0, "cy": 1366.5, "w": 46.0, "h": 17.0}, {"id": "27BBBF63", "symbols": ["NFKBIA", "NFKBIB"], "entries": [{"symbol": "NFKBIA", "log2": -1.37878}, {"symbol": "NFKBIB", "log2": -0.533817}], "log2": -0.9562984999999999, "abs": 0.9562984999999999, "cx": 973.0, "cy": 1389.5, "w": 46.0, "h": 17.0}, {"id": "292F5351", "symbols": ["NFKB1", "RELA"], "entries": [{"symbol": "NFKB1", "log2": -1.11864}, {"symbol": "RELA", "log2": -0.555163}], "log2": -0.8369015, "abs": 0.8369015, "cx": 973.0, "cy": 1425.5, "w": 46.0, "h": 17.0}, {"id": "4BE1FE4B", "symbols": ["IFIH1"], "entries": [{"symbol": "IFIH1", "log2": 0.00325345}], "log2": 0.00325345, "abs": 0.00325345, "cx": 599.0, "cy": 1598.5, "w": 46.0, "h": 17.0}, {"id": "DA1BBB6D", "symbols": ["MAVS"], "entries": [{"symbol": "MAVS", "log2": 0.132068}], "log2": 0.132068, "abs": 0.132068, "cx": 675.0, "cy": 1580.5, "w": 46.0, "h": 17.0}, {"id": "2AACD2E0", "symbols": ["IRF3"], "entries": [{"symbol": "IRF3", "log2": 0.13641}], "log2": 0.13641, "abs": 0.13641, "cx": 972.0, "cy": 1580.5, "w": 46.0, "h": 17.0}, {"id": "74DE6012", "symbols": ["IFNAR1", "IFNAR2"], "entries": [{"symbol": "IFNAR1", "log2": -0.268207}, {"symbol": "IFNAR2", "log2": 0.0751879}], "log2": -0.09650954999999999, "abs": 0.09650954999999999, "cx": 411.0, "cy": 1862.5, "w": 46.0, "h": 17.0}, {"id": "E0F29C35", "symbols": ["JAK1", "TYK2"], "entries": [{"symbol": "JAK1", "log2": 0.192438}, {"symbol": "TYK2", "log2": 0.196475}], "log2": 0.1944565, "abs": 0.1944565, "cx": 507.0, "cy": 1862.5, "w": 46.0, "h": 17.0}, {"id": "CF361C6E", "symbols": ["STAT1"], "entries": [{"symbol": "STAT1", "log2": -0.089994}], "log2": -0.089994, "abs": 0.089994, "cx": 718.0, "cy": 1848.5, "w": 46.0, "h": 17.0}, {"id": "2A184B57", "symbols": ["IRF9"], "entries": [{"symbol": "IRF9", "log2": 0.264589}], "log2": 0.264589, "abs": 0.264589, "cx": 964.0, "cy": 1863.5, "w": 46.0, "h": 17.0}, {"id": "C7DE6674", "symbols": ["TRAF6"], "entries": [{"symbol": "TRAF6", "log2": -0.366211}], "log2": -0.366211, "abs": 0.366211, "cx": 721.0, "cy": 1366.5, "w": 46.0, "h": 17.0}, {"id": "33D4EB41", "symbols": ["ADAR"], "entries": [{"symbol": "ADAR", "log2": 0.0166097}], "log2": 0.0166097, "abs": 0.0166097, "cx": 1218.0, "cy": 1852.5, "w": 46.0, "h": 17.0}, {"id": "33E9B619", "symbols": ["MAP3K7"], "entries": [{"symbol": "MAP3K7", "log2": 0.0691943}], "log2": 0.0691943, "abs": 0.0691943, "cx": 816.0, "cy": 1357.5, "w": 46.0, "h": 17.0}, {"id": "B995FD2F", "symbols": ["IKBKE"], "entries": [{"symbol": "IKBKE", "log2": 0.213176}], "log2": 0.213176, "abs": 0.213176, "cx": 869.0, "cy": 1573.5, "w": 46.0, "h": 17.0}, {"id": "B997FCB8", "symbols": ["TBK1"], "entries": [{"symbol": "TBK1", "log2": -0.0311829}], "log2": -0.0311829, "abs": 0.0311829, "cx": 869.0, "cy": 1590.5, "w": 46.0, "h": 17.0}, {"id": "27B5504B", "symbols": ["FOS", "JUN"], "entries": [{"symbol": "FOS", "log2": 0.249707}, {"symbol": "JUN", "log2": 0.771353}], "log2": 0.5105299999999999, "abs": 0.5105299999999999, "cx": 973.0, "cy": 1347.5, "w": 46.0, "h": 17.0}, {"id": "1DBE713A", "symbols": ["EIF2AK2"], "entries": [{"symbol": "EIF2AK2", "log2": -0.384219}], "log2": -0.384219, "abs": 0.384219, "cx": 1270.0, "cy": 1875.5, "w": 46.0, "h": 17.0}, {"id": "43AABB95", "symbols": ["TRAF3"], "entries": [{"symbol": "TRAF3", "log2": -0.688677}], "log2": -0.688677, "abs": 0.688677, "cx": 765.0, "cy": 1580.5, "w": 46.0, "h": 17.0}, {"id": "9AFFDD54", "symbols": ["IKBKB", "IKBKG"], "entries": [{"symbol": "IKBKB", "log2": 0.146299}, {"symbol": "IKBKG", "log2": 0.144239}], "log2": 0.145269, "abs": 0.145269, "cx": 901.0, "cy": 1389.5, "w": 46.0, "h": 17.0}, {"id": "C7BD2CBD", "symbols": ["NFKB1", "RELA"], "entries": [{"symbol": "NFKB1", "log2": -1.11864}, {"symbol": "RELA", "log2": -0.555163}], "log2": -0.8369015, "abs": 0.8369015, "cx": 862.0, "cy": 703.5, "w": 46.0, "h": 17.0}, {"id": "08DA678A", "symbols": ["IL1B"], "entries": [{"symbol": "IL1B", "log2": -2.94623}], "log2": -2.94623, "abs": 2.94623, "cx": 1218.0, "cy": 685.5, "w": 46.0, "h": 17.0}, {"id": "0B5545EF", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 1270.0, "cy": 664.5, "w": 46.0, "h": 17.0}, {"id": "08D76C0D", "symbols": ["TNF"], "entries": [{"symbol": "TNF", "log2": -1.28951}], "log2": -1.28951, "abs": 1.28951, "cx": 1218.0, "cy": 664.5, "w": 46.0, "h": 17.0}, {"id": "0B58416C", "symbols": ["IL12A"], "entries": [{"symbol": "IL12A", "log2": 0.357384}], "log2": 0.357384, "abs": 0.357384, "cx": 1270.0, "cy": 685.5, "w": 46.0, "h": 17.0}, {"id": "0A4EF919", "symbols": ["CCL2"], "entries": [{"symbol": "CCL2", "log2": -1.75338}], "log2": -1.75338, "abs": 1.75338, "cx": 1218.0, "cy": 730.5, "w": 46.0, "h": 17.0}, {"id": "CF3A9074", "symbols": ["STAT2"], "entries": [{"symbol": "STAT2", "log2": 0.180063}], "log2": 0.180063, "abs": 0.180063, "cx": 718.0, "cy": 1876.5, "w": 46.0, "h": 17.0}, {"id": "A8B8052B", "symbols": ["HBEGF"], "entries": [{"symbol": "HBEGF", "log2": -1.1161}], "log2": -1.1161, "abs": 1.1161, "cx": 375.0, "cy": 817.5, "w": 46.0, "h": 17.0}, {"id": "5298356B", "symbols": ["TNF"], "entries": [{"symbol": "TNF", "log2": -1.28951}], "log2": -1.28951, "abs": 1.28951, "cx": 217.0, "cy": 844.5, "w": 46.0, "h": 17.0}, {"id": "078B768E", "symbols": ["IL6R"], "entries": [{"symbol": "IL6R", "log2": -0.539295}], "log2": -0.539295, "abs": 0.539295, "cx": 288.0, "cy": 896.5, "w": 46.0, "h": 17.0}, {"id": "DCB088D5", "symbols": ["HBEGF"], "entries": [{"symbol": "HBEGF", "log2": -1.1161}], "log2": -1.1161, "abs": 1.1161, "cx": 253.0, "cy": 870.5, "w": 46.0, "h": 17.0}, {"id": "ED9C79FF", "symbols": ["TNFRSF1A"], "entries": [{"symbol": "TNFRSF1A", "log2": -0.357582}], "log2": -0.357582, "abs": 0.357582, "cx": 411.0, "cy": 940.5, "w": 46.0, "h": 17.0}, {"id": "68F06D8F", "symbols": ["IL6ST"], "entries": [{"symbol": "IL6ST", "log2": -0.667171}], "log2": -0.667171, "abs": 0.667171, "cx": 411.0, "cy": 1023.5, "w": 46.0, "h": 17.0}, {"id": "7F77FC44", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 200.0, "cy": 1023.5, "w": 46.0, "h": 17.0}, {"id": "E8F81A67", "symbols": ["IL6R"], "entries": [{"symbol": "IL6R", "log2": -0.539295}], "log2": -0.539295, "abs": 0.539295, "cx": 288.0, "cy": 1023.5, "w": 46.0, "h": 17.0}, {"id": "2FB7F774", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 1372.0, "cy": 1018.5, "w": 46.0, "h": 17.0}, {"id": "47A9C875", "symbols": ["NFKBIA", "NFKBIB"], "entries": [{"symbol": "NFKBIA", "log2": -1.37878}, {"symbol": "NFKBIB", "log2": -0.533817}], "log2": -0.9562984999999999, "abs": 0.9562984999999999, "cx": 721.0, "cy": 943.5, "w": 46.0, "h": 17.0}, {"id": "66ACCB64", "symbols": ["NFKB1", "RELA"], "entries": [{"symbol": "NFKB1", "log2": -1.11864}, {"symbol": "RELA", "log2": -0.555163}], "log2": -0.8369015, "abs": 0.8369015, "cx": 720.0, "cy": 979.5, "w": 46.0, "h": 17.0}, {"id": "C3616F7A", "symbols": ["STAT3"], "entries": [{"symbol": "STAT3", "log2": -0.248366}], "log2": -0.248366, "abs": 0.248366, "cx": 721.0, "cy": 1024.5, "w": 46.0, "h": 17.0}, {"id": "E1CFA999", "symbols": ["JAK1"], "entries": [{"symbol": "JAK1", "log2": 0.192438}], "log2": 0.192438, "abs": 0.192438, "cx": 457.0, "cy": 1023.5, "w": 46.0, "h": 17.0}, {"id": "41B00390", "symbols": ["IL1B"], "entries": [{"symbol": "IL1B", "log2": -2.94623}], "log2": -2.94623, "abs": 2.94623, "cx": 1425.0, "cy": 1018.5, "w": 46.0, "h": 17.0}, {"id": "459B1D90", "symbols": ["CCL2"], "entries": [{"symbol": "CCL2", "log2": -1.75338}], "log2": -1.75338, "abs": 1.75338, "cx": 1425.0, "cy": 1090.5, "w": 46.0, "h": 17.0}, {"id": "ADB5FF74", "symbols": ["TNF"], "entries": [{"symbol": "TNF", "log2": -1.28951}], "log2": -1.28951, "abs": 1.28951, "cx": 1372.0, "cy": 1114.5, "w": 46.0, "h": 17.0}, {"id": "33A31174", "symbols": ["CXCL10"], "entries": [{"symbol": "CXCL10", "log2": -0.225994}], "log2": -0.225994, "abs": 0.225994, "cx": 1372.0, "cy": 1090.5, "w": 46.0, "h": 17.0}, {"id": "E5F1E917", "symbols": ["C5AR1"], "entries": [{"symbol": "C5AR1", "log2": -1.39882}], "log2": -1.39882, "abs": 1.39882, "cx": 411.0, "cy": 2032.5, "w": 46.0, "h": 17.0}, {"id": "E5F4E90B", "symbols": ["C3AR1"], "entries": [{"symbol": "C3AR1", "log2": 0.239724}], "log2": 0.239724, "abs": 0.239724, "cx": 411.0, "cy": 2056.5, "w": 46.0, "h": 17.0}, {"id": "6BEC6E95", "symbols": ["FCGR2A"], "entries": [{"symbol": "FCGR2A", "log2": -0.0151196}], "log2": -0.0151196, "abs": 0.0151196, "cx": 411.0, "cy": 1241.5, "w": 46.0, "h": 17.0}, {"id": "CF97F9E3", "symbols": ["CYBB"], "entries": [{"symbol": "CYBB", "log2": -0.171447}], "log2": -0.171447, "abs": 0.171447, "cx": 606.0, "cy": 703.5, "w": 46.0, "h": 17.0}, {"id": "DCF9D23B", "symbols": ["SYK"], "entries": [{"symbol": "SYK", "log2": -0.10766}], "log2": -0.10766, "abs": 0.10766, "cx": 513.0, "cy": 1230.5, "w": 46.0, "h": 17.0}, {"id": "DCFDC535", "symbols": ["SYK"], "entries": [{"symbol": "SYK", "log2": -0.10766}], "log2": -0.10766, "abs": 0.10766, "cx": 513.0, "cy": 1252.5, "w": 46.0, "h": 17.0}, {"id": "50653D5D", "symbols": ["PLCG1", "PLCG2"], "entries": [{"symbol": "PLCG1", "log2": -0.0909072}, {"symbol": "PLCG2", "log2": 0.457401}], "log2": 0.1832469, "abs": 0.1832469, "cx": 615.0, "cy": 1252.5, "w": 46.0, "h": 17.0}, {"id": "46A63A12", "symbols": ["PRKCA", "PRKCB"], "entries": [{"symbol": "PRKCA", "log2": -0.780629}, {"symbol": "PRKCB", "log2": 0.086208}], "log2": -0.3472105, "abs": 0.3472105, "cx": 776.0, "cy": 1241.5, "w": 46.0, "h": 17.0}, {"id": "4C677E51", "symbols": ["CGAS"], "entries": [{"symbol": "CGAS", "log2": 0.460767}], "log2": 0.460767, "abs": 0.460767, "cx": 599.0, "cy": 1686.5, "w": 46.0, "h": 17.0}, {"id": "33C8EF83", "symbols": ["STING1"], "entries": [{"symbol": "STING1", "log2": 0.217574}], "log2": 0.217574, "abs": 0.217574, "cx": 740.0, "cy": 1686.5, "w": 46.0, "h": 17.0}, {"id": "9FDD2BA6", "symbols": ["TBK1"], "entries": [{"symbol": "TBK1", "log2": -0.0311829}], "log2": -0.0311829, "abs": 0.0311829, "cx": 836.0, "cy": 1686.5, "w": 46.0, "h": 17.0}, {"id": "0D50689C", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 1218.0, "cy": 979.5, "w": 46.0, "h": 17.0}, {"id": "6A6EF200", "symbols": ["IL6ST"], "entries": [{"symbol": "IL6ST", "log2": -0.667171}], "log2": -0.667171, "abs": 0.667171, "cx": 411.0, "cy": 1138.5, "w": 46.0, "h": 17.0}, {"id": "B91372B2", "symbols": ["CASP1"], "entries": [{"symbol": "CASP1", "log2": 0.445725}], "log2": 0.445725, "abs": 0.445725, "cx": 869.0, "cy": 1502.5, "w": 46.0, "h": 17.0}, {"id": "1CC52757", "symbols": ["IL1B"], "entries": [{"symbol": "IL1B", "log2": -2.94623}], "log2": -2.94623, "abs": 2.94623, "cx": 956.0, "cy": 1483.5, "w": 46.0, "h": 17.0}, {"id": "1E393957", "symbols": ["IL1B"], "entries": [{"symbol": "IL1B", "log2": -2.94623}], "log2": -2.94623, "abs": 2.94623, "cx": 956.0, "cy": 1523.5, "w": 46.0, "h": 17.0}, {"id": "3BD76137", "symbols": ["NLRP3"], "entries": [{"symbol": "NLRP3", "log2": -0.863694}], "log2": -0.863694, "abs": 0.863694, "cx": 1218.0, "cy": 1457.5, "w": 46.0, "h": 17.0}, {"id": "3D759EE0", "symbols": ["ISG15"], "entries": [{"symbol": "ISG15", "log2": -0.488552}], "log2": -0.488552, "abs": 0.488552, "cx": 578.0, "cy": 1631.5, "w": 46.0, "h": 17.0}, {"id": "1FBC3051", "symbols": ["ISG15"], "entries": [{"symbol": "ISG15", "log2": -0.488552}], "log2": -0.488552, "abs": 0.488552, "cx": 957.0, "cy": 1615.5, "w": 46.0, "h": 17.0}, {"id": "435867A3", "symbols": ["IL6"], "entries": [{"symbol": "IL6", "log2": -1.1835}], "log2": -1.1835, "abs": 1.1835, "cx": 1218.0, "cy": 2045.5, "w": 46.0, "h": 17.0}, {"id": "BFAE0B90", "symbols": ["IL12A"], "entries": [{"symbol": "IL12A", "log2": 0.357384}], "log2": 0.357384, "abs": 0.357384, "cx": 1425.0, "cy": 1114.5, "w": 46.0, "h": 17.0}, {"id": "D418E90B", "symbols": ["C1QA", "C1QB", "C1R"], "entries": [{"symbol": "C1QA", "log2": 0.139435}, {"symbol": "C1QB", "log2": 0.388996}, {"symbol": "C1R", "log2": -0.352928}], "log2": 0.058501, "abs": 0.058501, "cx": 381.0, "cy": 2356.5, "w": 46.0, "h": 17.0}, {"id": "35638A7E", "symbols": ["C3"], "entries": [{"symbol": "C3", "log2": -0.392975}], "log2": -0.392975, "abs": 0.392975, "cx": 698.0, "cy": 2296.5, "w": 46.0, "h": 17.0}, {"id": "1EE36E46", "symbols": ["C5"], "entries": [{"symbol": "C5", "log2": 0.160513}], "log2": 0.160513, "abs": 0.160513, "cx": 910.0, "cy": 2297.5, "w": 46.0, "h": 17.0}, {"id": "D71EE14B", "symbols": ["C8G"], "entries": [{"symbol": "C8G", "log2": 0.361091}], "log2": 0.361091, "abs": 0.361091, "cx": 1113.0, "cy": 2272.5, "w": 46.0, "h": 17.0}, {"id": "DCDB6380", "symbols": ["C5AR1"], "entries": [{"symbol": "C5AR1", "log2": -1.39882}], "log2": -1.39882, "abs": 1.39882, "cx": 1188.0, "cy": 2237.5, "w": 46.0, "h": 17.0}, {"id": "5BD2FB85", "symbols": ["C3AR1"], "entries": [{"symbol": "C3AR1", "log2": 0.239724}], "log2": 0.239724, "abs": 0.239724, "cx": 1188.0, "cy": 2350.5, "w": 46.0, "h": 17.0}, {"id": "E13E7D80", "symbols": ["C5", "C8G"], "entries": [{"symbol": "C5", "log2": 0.160513}, {"symbol": "C8G", "log2": 0.361091}], "log2": 0.260802, "abs": 0.260802, "cx": 1188.0, "cy": 2299.5, "w": 46.0, "h": 17.0}, {"id": "D9D6E585", "symbols": ["SELP"], "entries": [{"symbol": "SELP", "log2": 1.37716}], "log2": 1.37716, "abs": 1.37716, "cx": 1188.0, "cy": 2456.5, "w": 46.0, "h": 17.0}, {"id": "DB51E185", "symbols": ["VWF"], "entries": [{"symbol": "VWF", "log2": 1.67722}], "log2": 1.67722, "abs": 1.67722, "cx": 1188.0, "cy": 2488.5, "w": 46.0, "h": 17.0}, {"id": "E22C5A3D", "symbols": ["F13A1"], "entries": [{"symbol": "F13A1", "log2": 0.909101}], "log2": 0.909101, "abs": 0.909101, "cx": 572.0, "cy": 2456.5, "w": 46.0, "h": 17.0}, {"id": "5324E965", "symbols": ["F13A1"], "entries": [{"symbol": "F13A1", "log2": 0.909101}], "log2": 0.909101, "abs": 0.909101, "cx": 671.0, "cy": 2456.5, "w": 46.0, "h": 17.0}, {"id": "4B76AF97", "symbols": ["CFD"], "entries": [{"symbol": "CFD", "log2": -0.216652}], "log2": -0.216652, "abs": 0.216652, "cx": 426.0, "cy": 2277.5, "w": 46.0, "h": 17.0}, {"id": "C1686937", "symbols": ["C3"], "entries": [{"symbol": "C3", "log2": -0.392975}], "log2": -0.392975, "abs": 0.392975, "cx": 532.0, "cy": 2218.5, "w": 46.0, "h": 17.0}, {"id": "5B6002B0", "symbols": ["C2"], "entries": [{"symbol": "C2", "log2": 0.360294}], "log2": 0.360294, "abs": 0.360294, "cx": 509.0, "cy": 2377.5, "w": 46.0, "h": 17.0}, {"id": "E69A0F7C", "symbols": ["NRP1"], "entries": [{"symbol": "NRP1", "log2": 0.00498862}], "log2": 0.00498862, "abs": 0.00498862, "cx": 411.0, "cy": 250.5, "w": 46.0, "h": 17.0}];
+const MAP_W = 1769.0;
+const MAP_H = 2638.0;
+const ABS_MAX = 2.94623;
+const IMG = 'map05171@2x_20260606_220006.png';
+
+const PLANE_W = 40;
+const PLANE_H = PLANE_W * (MAP_H / MAP_W);
+const BAR_HEIGHT_SCALE = 6 / (ABS_MAX || 1);
+const MIN_BAR = 0.08;
+
+const host = document.getElementById('canvas-host');
+const tooltip = document.getElementById('tooltip');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1f2e);
+scene.fog = new THREE.Fog(0x1a1f2e, 80, 140);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+const ISO_DIST = 55;
+camera.position.set(ISO_DIST, ISO_DIST * 0.82, ISO_DIST);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+host.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.06;
+controls.target.set(0, 0, 0);
+controls.minDistance = 20;
+controls.maxDistance = 120;
+controls.maxPolarAngle = Math.PI / 2.2;
+controls.minPolarAngle = 0.35;
+controls.update();
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const sun = new THREE.DirectionalLight(0xffffff, 0.85);
+sun.position.set(30, 50, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xaaccff, 0.35);
+fill.position.set(-20, 15, -25);
+scene.add(fill);
+
+const isoGroup = new THREE.Group();
+isoGroup.rotation.x = -Math.PI / 2;
+scene.add(isoGroup);
+
+const barsGroup = new THREE.Group();
+isoGroup.add(barsGroup);
+
+const textureLoader = new THREE.TextureLoader();
+textureLoader.load(IMG, function (texture) {
+	texture.colorSpace = THREE.SRGBColorSpace;
+	texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+	const planeGeo = new THREE.PlaneGeometry(PLANE_W, PLANE_H);
+	const planeMat = new THREE.MeshStandardMaterial({
+		map: texture,
+		roughness: 0.92,
+		metalness: 0.02,
+	});
+	const plane = new THREE.Mesh(planeGeo, planeMat);
+	plane.receiveShadow = true;
+	isoGroup.add(plane);
+
+	const edgeGeo = new THREE.EdgesGeometry(planeGeo);
+	const edge = new THREE.LineSegments(
+		edgeGeo,
+		new THREE.LineBasicMaterial({ color: 0x334455, transparent: true, opacity: 0.5 })
+	);
+	isoGroup.add(edge);
+
+	buildBars();
+});
+
+function mapX(cx) {
+	return (cx / MAP_W - 0.5) * PLANE_W;
+}
+function mapY(cy) {
+	return (0.5 - cy / MAP_H) * PLANE_H;
+}
+
+function formatTooltip(area) {
+	if (area.entries.length === 1) {
+		var e = area.entries[0];
+		return (
+			'<strong>' + e.symbol + '</strong><br>' +
+			'log2FC: ' + e.log2.toFixed(3) + '<br>' +
+			'|log2FC|: ' + Math.abs(e.log2).toFixed(3)
+		);
+	}
+	return area.entries.map(function (e) {
+		return '<strong>' + e.symbol + '</strong>: ' + e.log2.toFixed(3);
+	}).join('<br>');
+}
+
+function colorForLog2(value) {
+	return value >= 0 ? 0xb2182b : 0x2166ac;
+}
+
+const barMeshes = [];
+
+function buildBars() {
+	const sorted = AREAS.slice().sort(function (a, b) { return a.abs - b.abs; });
+
+	sorted.forEach(function (area) {
+		const barW = Math.max(0.15, Math.min(0.55, (area.w / MAP_W) * PLANE_W * 0.85));
+		const barD = Math.max(0.15, Math.min(0.55, (area.h / MAP_H) * PLANE_H * 0.85));
+		const height = Math.max(MIN_BAR, area.abs * BAR_HEIGHT_SCALE);
+
+		const geo = new THREE.BoxGeometry(barW, barD, height);
+		geo.translate(0, 0, height / 2);
+
+		const mat = new THREE.MeshStandardMaterial({
+			color: colorForLog2(area.log2),
+			roughness: 0.45,
+			metalness: 0.08,
+		});
+		const mesh = new THREE.Mesh(geo, mat);
+		mesh.position.set(mapX(area.cx), mapY(area.cy), 0.01);
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		mesh.userData = area;
+		barsGroup.add(mesh);
+		barMeshes.push(mesh);
+	});
+}
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+function onPointerMove(event) {
+	pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+	pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+	raycaster.setFromCamera(pointer, camera);
+	const hits = raycaster.intersectObjects(barMeshes, false);
+	if (hits.length) {
+		const a = hits[0].object.userData;
+		tooltip.style.display = 'block';
+		tooltip.style.left = (event.clientX + 12) + 'px';
+		tooltip.style.top = (event.clientY + 12) + 'px';
+		tooltip.innerHTML = formatTooltip(a);
+		renderer.domElement.style.cursor = 'pointer';
+	} else {
+		tooltip.style.display = 'none';
+		renderer.domElement.style.cursor = 'grab';
+	}
+}
+
+renderer.domElement.addEventListener('pointermove', onPointerMove);
+
+function onResize() {
+	camera.aspect = window.innerWidth / window.innerHeight;
+	camera.updateProjectionMatrix();
+	renderer.setSize(window.innerWidth, window.innerHeight);
+}
+window.addEventListener('resize', onResize);
+
+function animate() {
+	requestAnimationFrame(animate);
+	controls.update();
+	renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
