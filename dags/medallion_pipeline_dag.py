@@ -1,9 +1,9 @@
 """
-DAG exemplo medalhão: bronze → silver (GEO GSE, GEO NOS, EBI) → gold (só ``gold_geo_nodes``).
+DAG exemplo medalhão: bronze → silver (GEO GSE, GEO NOS, EBI) → gold.
 
 Cada etapa lê/escreve ficheiros em ``data/`` sob AIRFLOW_HOME.
-A única task gold cruza ``silver_geo_nodes`` com ``silver_geo_nodes_principal`` (ver
-``dags/medallion/gold/gold_geo_nodes.ipynb``).
+``silver_opentargets_clinical`` correlaciona API com ``silver_geo_nodes_principal``.
+``gold_opentargets_clinical`` correlaciona essa silver com ``gold_geo_nodes`` final.
 """
 
 from __future__ import annotations
@@ -15,12 +15,15 @@ from airflow.operators.python import PythonOperator
 
 from medallion.bronze.bronze import run_bronze
 from medallion.bronze.bronze_ebi import run_bronze_ebi
+from medallion.gold.gold_edge_ppi import run_gold_edge_ppi
 from medallion.gold.gold import run_gold_geo_nodes
+from medallion.gold.gold_opentargets_clinical import run_gold_opentargets_clinical
 from medallion.silver.silver import (
     run_silver_ebi_nodes,
     run_silver_geo_nodes,
     run_silver_geo_nodes_principal,
 )
+from medallion.silver.silver_opentargets_clinical import run_silver_opentargets_clinical
 
 with DAG(
     dag_id="medallion_sample_pipeline",
@@ -50,6 +53,10 @@ with DAG(
         task_id="silver_ebi_nodes",
         python_callable=run_silver_ebi_nodes,
     )
+    silver_opentargets_clinical = PythonOperator(
+        task_id="silver_opentargets_clinical",
+        python_callable=run_silver_opentargets_clinical,
+    )
     gold_geo_nodes = PythonOperator(
         task_id="gold_geo_nodes",
         python_callable=run_gold_geo_nodes,
@@ -58,8 +65,15 @@ with DAG(
         task_id="gold_edge_ppi",
         python_callable=run_gold_edge_ppi,
     )
+    gold_opentargets_clinical = PythonOperator(
+        task_id="gold_opentargets_clinical",
+        python_callable=run_gold_opentargets_clinical,
+    )
 
     bronze_geo_soft_ingest >> silver_geo_nodes
     bronze_geo_soft_ingest >> silver_geo_nodes_principal
     [silver_geo_nodes, silver_geo_nodes_principal] >> gold_geo_nodes
+    silver_geo_nodes_principal >> gold_edge_ppi
+    silver_geo_nodes_principal >> silver_opentargets_clinical
+    [gold_geo_nodes, silver_opentargets_clinical] >> gold_opentargets_clinical
     bronze_ebi_gxa_ingest >> silver_ebi_nodes
